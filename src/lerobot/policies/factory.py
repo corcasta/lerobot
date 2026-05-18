@@ -231,6 +231,7 @@ class ProcessorConfigKwargs(TypedDict, total=False):
     preprocessor_overrides: dict[str, Any] | None
     postprocessor_overrides: dict[str, Any] | None
     dataset_stats: dict[str, dict[str, torch.Tensor]] | None
+    rename_map: dict[str, str] | None
 
 
 def make_pre_post_processors(
@@ -363,6 +364,7 @@ def make_pre_post_processors(
         processors = make_pi05_pre_post_processors(
             config=policy_cfg,
             dataset_stats=kwargs.get("dataset_stats"),
+            rename_map=kwargs.get("rename_map", {})
         )
 
     elif isinstance(policy_cfg, GaussianActorConfig):
@@ -492,7 +494,21 @@ def make_policy(
 
     cfg.output_features = {key: ft for key, ft in features.items() if ft.type is FeatureType.ACTION}
     if not cfg.input_features:
-        cfg.input_features = {key: ft for key, ft in features.items() if key not in cfg.output_features}
+        cfg.input_features = {}
+        for key, ft in features.items():
+            if key not in cfg.output_features:
+                # This is the new addition when rename_map is passed
+                # it makes sure to keep SAME input_feature ORDER as
+                # what is define in the policy config.json since the batch
+                # contains the policy input_features key names instead of the dataset
+                # when using rename_map, we need to rename also the input_features here, to keep the ones from
+                # before the policy object is created so that keeps the key names from 
+                # the policy instead of the dataset.
+                if rename_map.get(key, None) and ft.type is FeatureType.VISUAL:
+                    new_key_name = rename_map[key]
+                    cfg.input_features[new_key_name] = ft
+                else:
+                    cfg.input_features[key] = ft
 
     # Store action feature names for relative_exclude_joints support
     if ds_meta is not None and hasattr(cfg, "action_feature_names"):
@@ -528,7 +544,7 @@ def make_policy(
 
         logging.info("Loading policy's PEFT adapter.")
 
-        peft_pretrained_path = str(cfg.pretrained_path)
+        peft_pretrained_path = cfg.pretrained_path
         peft_config = PeftConfig.from_pretrained(peft_pretrained_path)
 
         kwargs["pretrained_name_or_path"] = peft_config.base_model_name_or_path

@@ -100,6 +100,7 @@ class Pi05PrepareStateTokenizerProcessorStep(ProcessorStep):
 def make_pi05_pre_post_processors(
     config: PI05Config,
     dataset_stats: dict[str, dict[str, torch.Tensor]] | None = None,
+    rename_map: dict[str, str] | None = None,
 ) -> tuple[
     PolicyProcessorPipeline[dict[str, Any], dict[str, Any]],
     PolicyProcessorPipeline[PolicyAction, PolicyAction],
@@ -137,7 +138,7 @@ def make_pi05_pre_post_processors(
 
     # OpenPI order: raw → relative → normalize → model → unnormalize → absolute
     input_steps: list[ProcessorStep] = [
-        RenameObservationsProcessorStep(rename_map={}),  # To mimic the same processor as pretrained one
+        RenameObservationsProcessorStep(rename_map={} if rename_map is None else rename_map),  # To mimic the same processor as pretrained one
         AddBatchDimensionProcessorStep(),
         relative_step,
         # NOTE: NormalizerProcessorStep MUST come before Pi05PrepareStateTokenizerProcessorStep

@@ -329,6 +329,8 @@ def train(cfg: TrainPipelineConfig, accelerator: "Accelerator | None" = None):
                 "norm_map": policy.config.normalization_mapping,
             },
         }
+    elif cfg.rename_map:
+        processor_kwargs["rename_map"] = cfg.rename_map
 
     if cfg.is_reward_model_training:
         preprocessor, postprocessor = make_reward_pre_post_processors(
