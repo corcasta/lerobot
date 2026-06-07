@@ -101,6 +101,7 @@ class Pi0FastPrepareStateAndLanguageTokenizerProcessorStep(ProcessorStep):
 def make_pi0_fast_pre_post_processors(
     config: PI0FastConfig,
     dataset_stats: dict[str, dict[str, torch.Tensor]] | None = None,
+    rename_map: dict[str, str] | None = None,
 ) -> tuple[
     PolicyProcessorPipeline[dict[str, Any], dict[str, Any]],
     PolicyProcessorPipeline[PolicyAction, PolicyAction],
@@ -144,7 +145,7 @@ def make_pi0_fast_pre_post_processors(
     # before Pi0FastPrepareStateAndLanguageTokenizerProcessorStep, so the state tokenizer
     # continues to receive normalized state in [-1, 1] as expected.
     input_steps: list[ProcessorStep] = [
-        RenameObservationsProcessorStep(rename_map={}),  # To mimic the same processor as pretrained one
+        RenameObservationsProcessorStep(rename_map={} if rename_map is None else rename_map),  # To mimic the same processor as pretrained one
         AddBatchDimensionProcessorStep(),
         relative_step,
         NormalizerProcessorStep(
